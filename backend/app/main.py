@@ -5,7 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from .core.config import settings
 from .core.database import engine, Base
+from .core.init_db import init_db
 from .api.routes import auth, documents, audit
+from .models.user import User
+from .models.document import Document
+from .models.audit import AuditLog
 
 # Création de l'application FastAPI avec titre, version et description
 app = FastAPI(
@@ -31,6 +35,9 @@ def startup_event():
     
     # Créer le dossier media/encrypted s'il n'existe pas
     os.makedirs(settings.MEDIA_DIR, exist_ok=True)
+    
+    # Initialiser l'administrateur par défaut
+    init_db()
 
 # Route racine pour un message de bienvenue
 @app.get("/")
