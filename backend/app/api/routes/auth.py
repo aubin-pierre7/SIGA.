@@ -1,6 +1,7 @@
 # backend/app/api/routes/auth.py
 
 from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -65,7 +66,7 @@ def inscription_utilisateur(
     
     return nouvel_utilisateur
 
-# Route pour la connexion d'un utilisateur
+# Route pour la connexion d'un utilisateur (JSON)
 @router.post("/connexion", response_model=TokenReponse)
 def connexion_utilisateur(
     utilisateur: UserConnexion,
@@ -73,7 +74,7 @@ def connexion_utilisateur(
     db: Session = Depends(get_db)
 ):
     """
-    Route pour connecter un utilisateur.
+    Route pour connecter un utilisateur avec données JSON.
     
     - Vérifie les identifiants
     - Crée un token JWT si connexion réussie
@@ -126,6 +127,70 @@ def connexion_utilisateur(
         "role": utilisateur_db.role,
         "nom": utilisateur_db.nom,
         "prenom": utilisateur_db.prenom
+    }
+
+# Route OAuth2 pour Swagger UI (formulaire username/password)
+@router.post("/token")
+def obtenir_token_oauth2(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    request: Request = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Route OAuth2 compatible avec Swagger UI.
+    
+    Le 'username' du formulaire correspond à l'email de l'utilisateur.
+    Utilisée par le bouton Authorize de Swagger pour obtenir un token.
+    """
+    # Le username du formulaire est l'email
+    email = form_data.username
+    mot_de_passe = form_data.password
+    
+    # Chercher l'utilisateur par email
+    utilisateur_db = db.query(User).filter(User.email == email).first()
+    
+    # Vérifier le mot de passe
+    if not utilisateur_db or not verifier_mot_de_passe(mot_de_passe, utilisateur_db.mot_de_passe):
+        # Enregistrer l'échec de connexion dans l'audit log
+        if utilisateur_db:
+            audit_log = AuditLog(
+                utilisateur_id=utilisateur_db.id,
+                action="echec_connexion",
+                adresse_ip=request.client.host if request else "127.0.0.1"
+            )
+            db.add(audit_log)
+            db.commit()
+        
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email ou mot de passe incorrect",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Vérifier que le compte est actif
+    if not utilisateur_db.est_actif:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Compte utilisateur inactif"
+        )
+    
+    # Créer le token d'accès
+    donnees_token = {"sub": utilisateur_db.email, "role": utilisateur_db.role}
+    access_token = creer_token_acces(donnees_token)
+    
+    # Enregistrer la connexion réussie dans l'audit log
+    audit_log = AuditLog(
+        utilisateur_id=utilisateur_db.id,
+        action="connexion",
+        adresse_ip=request.client.host if request else "127.0.0.1"
+    )
+    db.add(audit_log)
+    db.commit()
+    
+    # Retourner le format OAuth2 standard
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
     }
 
 # Route pour obtenir les informations de l'utilisateur connecté

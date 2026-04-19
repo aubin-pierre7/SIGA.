@@ -10,7 +10,7 @@ from ..models.user import User  # Chemin relatif corrigé
 from .security import decoder_token
 
 # Schéma OAuth2 pour extraire le token JWT depuis le header Authorization
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 # Fonction dépendance pour obtenir l'utilisateur actuel depuis le token JWT
 def obtenir_utilisateur_actuel(
