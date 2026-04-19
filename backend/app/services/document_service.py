@@ -7,6 +7,11 @@ from ..core.config import settings
 import uuid, os
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from ..ia.text_extractor import extraire_texte
+from ..ia.classifier import obtenir_categorie
+from ..ia.extractor import extraire_metadonnees
+from ..ia.confidentiality import analyser_confidentialite
+import json
 
 # Fonction pour enregistrer une action dans le journal d'audit
 def enregistrer_audit(db: Session, utilisateur_id: int, action: str, adresse_ip: str, 
@@ -43,12 +48,14 @@ def sauvegarder_document(db: Session, fichier, titre: str, niveau_confidentialit
     
     Lit le contenu du fichier, calcule son hash, le chiffre,
     le sauvegarde sur le disque et crée l'entrée en base de données.
+    Intègre les analyses IA : extraction de texte, classification,
+    métadonnées et analyse de confidentialité.
     
     Args:
         db (Session): Session de base de données
         fichier: Objet fichier uploadé (FastAPI UploadFile)
         titre (str): Titre du document
-        niveau_confidentialite (str): Niveau de confidentialité
+        niveau_confidentialite (str): Niveau de confidentialité (optionnel)
         utilisateur_id (int): ID de l'utilisateur qui upload
         adresse_ip (str): Adresse IP de l'utilisateur
         
@@ -63,6 +70,22 @@ def sauvegarder_document(db: Session, fichier, titre: str, niveau_confidentialit
         contenu = fichier.file.read()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Erreur lors de la lecture du fichier : {str(e)}")
+    
+    # Extraire le texte du document pour les analyses IA
+    texte = extraire_texte(contenu, fichier.filename)
+    
+    # Classifier le document avec IA
+    categorie = obtenir_categorie(texte)
+    
+    # Extraire les métadonnées avec IA (spaCy + regex)
+    metadonnees = extraire_metadonnees(texte)
+    
+    # Analyser la confidentialité avec IA seulement si non fournie par l'utilisateur
+    if not niveau_confidentialite or niveau_confidentialite.strip() == "":
+        analyse = analyser_confidentialite(texte)
+        niveau_final = analyse["niveau_suggere"]
+    else:
+        niveau_final = niveau_confidentialite
     
     # Calculer le hash SHA-256 du fichier original
     hash_sha256 = calculer_hash_sha256(contenu)
@@ -81,30 +104,32 @@ def sauvegarder_document(db: Session, fichier, titre: str, niveau_confidentialit
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur lors de la sauvegarde du fichier : {str(e)}")
     
-    # Créer l'entrée en base de données
+    # Créer l'entrée en base de données avec les analyses IA
     document = Document(
         titre=titre,
         nom_fichier_original=fichier.filename,
         nom_fichier_chiffre=nom_fichier_chiffre,
-        type_document="non classifié",  # Sera mis à jour par l'IA
-        niveau_confidentialite=niveau_confidentialite,
+        type_document=categorie,  # Classification IA
+        niveau_confidentialite=niveau_final,  # Niveau final (IA ou utilisateur)
         hash_sha256=hash_sha256,
         taille_fichier=len(contenu),
-        uploade_par=utilisateur_id
+        uploade_par=utilisateur_id,
+        metadonnees_ia=json.dumps(metadonnees, ensure_ascii=False)  # Métadonnées IA en JSON
     )
     
     db.add(document)
     db.commit()
     db.refresh(document)
     
-    # Enregistrer dans l'audit
+    # Enregistrer dans l'audit avec détails des analyses IA
+    details_audit = f"Document '{titre}' uploadé | Catégorie IA: {categorie} | Confidentialité: {niveau_final}"
     enregistrer_audit(
         db=db,
         utilisateur_id=utilisateur_id,
         action="upload",
         adresse_ip=adresse_ip,
         document_id=document.id,
-        details=f"Document '{titre}' uploadé"
+        details=details_audit
     )
     
     return document
