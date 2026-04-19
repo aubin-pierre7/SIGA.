@@ -21,4 +21,4 @@ automatique des documents.
 *Instructions à venir*
 
 ## Auteur
-Ton Prénom NOM — DUT Informatique
+Aubin Pierre — DUT Informatique
