@@ -1,0 +1,35 @@
+# Environnement Python
+env/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Variables d'environnement - NE JAMAIS ENVOYER SUR GITHUB
+backend/.env
+
+# Base de données locale
+*.db
+*.sqlite3
+
+# Fichiers chiffrés media
+backend/media/
+
+# Node.js
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+
+# VS Code
+.vscode/
+
+# Système Windows
+Thumbs.db
+Desktop.ini
+
+# Modèles IA entraînés
+backend/app/ia/models/
+*.pkl
+*.joblib
