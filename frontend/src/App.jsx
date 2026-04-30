@@ -8,6 +8,7 @@ import Documents from './pages/Documents'
 import Upload from './pages/Upload'
 import Audit from './pages/Audit'
 import { useAuth } from './services/useAuth'
+import Utilisateurs from './pages/Utilisateurs'
 
 // Layout avec Navbar pour les pages protégées
 const LayoutAvecNavbar = () => {
