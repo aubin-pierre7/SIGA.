@@ -16,7 +16,7 @@ from ...schemas.document import AuditLogReponse
 router = APIRouter(prefix="/audit", tags=["Audit"])
 
 # Route pour lister tous les logs d'audit (admin seulement)
-@router.get("/logs", response_model=List[AuditLogReponse])
+@router.get("/logs")
 def lister_logs_audit(
     skip: int = Query(0, ge=0, description="Nombre d'éléments à sauter pour la pagination"),
     limit: int = Query(100, ge=1, le=1000, description="Nombre maximum d'éléments à retourner"),
@@ -40,10 +40,13 @@ def lister_logs_audit(
     if utilisateur_id:
         query = query.filter(AuditLog.utilisateur_id == utilisateur_id)
     
+    # Compter le total avant pagination
+    total = query.count()
+    
     # Ordonner par date décroissante et appliquer la pagination
     logs = query.order_by(AuditLog.date_action.desc()).offset(skip).limit(limit).all()
     
-    return logs
+    return {"logs": logs, "total": total}
 
 # Route pour obtenir un log spécifique (admin seulement)
 @router.get("/logs/{log_id}", response_model=AuditLogReponse)

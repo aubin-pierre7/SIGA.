@@ -187,10 +187,13 @@ def obtenir_token_oauth2(
     db.add(audit_log)
     db.commit()
     
-    # Retourner le format OAuth2 standard
+    # Retourner le format OAuth2 standard avec informations utilisateur
     return {
         "access_token": access_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "role": utilisateur_db.role,
+        "nom": utilisateur_db.nom,
+        "prenom": utilisateur_db.prenom
     }
 
 # Route pour obtenir les informations de l'utilisateur connecté
