@@ -1,26 +1,25 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../services/useAuth'
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../services/useAuth";
 
 // Couleurs des badges selon le rôle
 const couleurRole = {
-  admin: 'bg-red-100 text-red-700',
-  agent: 'bg-blue-100 text-blue-700',
-  lecteur: 'bg-green-100 text-green-700',
-}
+  admin: "bg-red-100 text-red-700",
+  agent: "bg-blue-100 text-blue-700",
+  lecteur: "bg-green-100 text-green-700",
+};
 
 const Navbar = () => {
-  const { utilisateur, role, logout } = useAuth()
-  const navigate = useNavigate()
+  const { utilisateur, role, logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
+    logout();
+    navigate("/login");
+  };
 
   return (
     <nav className="bg-white border-b-2 border-blue-900 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-
         {/* Logo SIGA */}
         <div>
           <span className="text-xl font-bold text-blue-900">SIGA</span>
@@ -37,15 +36,23 @@ const Navbar = () => {
           <Link to="/documents" className="text-blue-900 hover:text-yellow-600">
             Documents
           </Link>
-          {(role === 'admin' || role === 'agent') && (
+          {(role === "admin" || role === "agent") && (
             <Link to="/upload" className="text-blue-900 hover:text-yellow-600">
               Upload
             </Link>
           )}
-          {role === 'admin' && (
-            <Link to="/audit" className="text-blue-900 hover:text-yellow-600">
-              Audit
-            </Link>
+          {role === "admin" && (
+            <>
+              <Link to="/audit" className="text-blue-900 hover:text-yellow-600">
+                Audit
+              </Link>
+              <Link
+                to="/utilisateurs"
+                className="text-blue-900 hover:text-yellow-600"
+              >
+                Utilisateurs
+              </Link>
+            </>
           )}
         </div>
 
@@ -55,7 +62,9 @@ const Navbar = () => {
             <p className="text-sm font-semibold text-blue-900">
               {utilisateur?.prenom} {utilisateur?.nom}
             </p>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${couleurRole[role] || 'bg-gray-100'}`}>
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full font-medium ${couleurRole[role] || "bg-gray-100"}`}
+            >
               {role}
             </span>
           </div>
@@ -66,10 +75,9 @@ const Navbar = () => {
             Déconnexion
           </button>
         </div>
-
       </div>
     </nav>
-  )
-}
+  );
+};
 
-export default Navbar
+export default Navbar;
