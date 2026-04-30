@@ -107,11 +107,6 @@ const Login = () => {
 
         </form>
 
-        {/* Infos demo */}
-        <p className="text-center text-xs text-gray-400 mt-6">
-          Demo : admin@siga.cm / Admin2024
-        </p>
-
       </div>
     </div>
   )
