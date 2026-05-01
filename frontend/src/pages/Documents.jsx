@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../services/useAuth'
-import { listerDocuments, telechargerDocument, supprimerDocument } from '../services/api'
+import {
+  listerDocuments,
+  telechargerDocument,
+  supprimerDocument
+} from '../services/api'
 import { useNavigate } from 'react-router-dom'
 
-// Couleurs des badges de confidentialité
 const couleurConf = {
   public: 'bg-green-100 text-green-700',
   interne: 'bg-blue-100 text-blue-700',
@@ -11,7 +14,6 @@ const couleurConf = {
   secret: 'bg-red-100 text-red-700',
 }
 
-// Couleurs des badges de type document
 const couleurType = {
   'Contrat': 'bg-purple-100 text-purple-700',
   'Rapport': 'bg-green-100 text-green-700',
@@ -28,10 +30,7 @@ const Documents = () => {
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState('')
 
-  // Charge la liste des documents au montage
-  useEffect(() => {
-    chargerDocuments()
-  }, [])
+  useEffect(() => { chargerDocuments() }, [])
 
   const chargerDocuments = async () => {
     try {
@@ -45,7 +44,6 @@ const Documents = () => {
     }
   }
 
-  // Télécharge un document déchiffré
   const handleTelecharger = async (doc) => {
     try {
       await telechargerDocument(doc.id, doc.nom_fichier_original)
@@ -54,9 +52,8 @@ const Documents = () => {
     }
   }
 
-  // Supprime un document après confirmation
   const handleSupprimer = async (id) => {
-    if (!window.confirm('Confirmer la suppression de ce document ?')) return
+    if (!window.confirm('Confirmer la suppression ?')) return
     try {
       await supprimerDocument(id)
       chargerDocuments()
@@ -65,7 +62,6 @@ const Documents = () => {
     }
   }
 
-  // Formate la taille du fichier
   const formaterTaille = (octets) => {
     if (octets < 1024) return `${octets} o`
     if (octets < 1024 * 1024) return `${(octets / 1024).toFixed(1)} Ko`
@@ -74,113 +70,156 @@ const Documents = () => {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-64">
-      <p className="text-gray-500">Chargement des documents...</p>
-    </div>
-  )
-
-  if (erreur) return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <p className="text-red-500">{erreur}</p>
+      <p className="text-gray-500">Chargement...</p>
     </div>
   )
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-6">
 
       {/* En-tête */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between
+        sm:items-center gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-blue-900">
+          <h1 className="text-xl sm:text-2xl font-bold text-blue-900">
             {role === 'admin' ? 'Tous les Documents' : 'Mes Documents'}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {documents.length} document(s) trouvé(s)
+            {documents.length} document(s)
           </p>
         </div>
         {(role === 'admin' || role === 'agent') && (
           <button
             onClick={() => navigate('/upload')}
             className="px-4 py-2 bg-blue-900 text-white rounded-lg
-              hover:bg-blue-800 text-sm font-medium"
+              text-sm font-medium w-full sm:w-auto"
           >
             + Nouveau document
           </button>
         )}
       </div>
 
-      {/* Tableau */}
+      {erreur && <p className="text-red-500 mb-4">{erreur}</p>}
+
       {documents.length === 0 ? (
         <div className="bg-white rounded-xl shadow p-12 text-center">
-          <p className="text-gray-400 text-lg">Aucun document archivé.</p>
-          {(role === 'admin' || role === 'agent') && (
-            <button
-              onClick={() => navigate('/upload')}
-              className="mt-4 px-4 py-2 bg-blue-900 text-white rounded-lg text-sm"
-            >
-              Uploader votre premier document
-            </button>
-          )}
+          <p className="text-gray-400">Aucun document archivé.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-blue-900 text-white">
-              <tr>
-                <th className="text-left px-4 py-3">Titre</th>
-                <th className="text-left px-4 py-3">Type IA</th>
-                <th className="text-left px-4 py-3">Confidentialité</th>
-                <th className="text-left px-4 py-3">Date</th>
-                <th className="text-left px-4 py-3">Taille</th>
-                <th className="text-left px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {documents.map((doc) => (
-                <tr key={doc.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-800">
+        <>
+          {/* Vue tableau sur grand écran */}
+          <div className="hidden md:block bg-white rounded-xl shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-blue-900 text-white">
+                  <tr>
+                    <th className="text-left px-4 py-3">Titre</th>
+                    <th className="text-left px-4 py-3">Type IA</th>
+                    <th className="text-left px-4 py-3">Confidentialité</th>
+                    <th className="text-left px-4 py-3">Date</th>
+                    <th className="text-left px-4 py-3">Taille</th>
+                    <th className="text-left px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {documents.map((doc) => (
+                    <tr key={doc.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-800">
+                        {doc.titre}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs
+                          font-medium ${couleurType[doc.type_document]
+                            || 'bg-gray-100 text-gray-600'}`}>
+                          {doc.type_document || 'Non classifié'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs
+                          font-medium ${couleurConf[doc.niveau_confidentialite]
+                            || 'bg-gray-100'}`}>
+                          {doc.niveau_confidentialite}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {new Date(doc.date_upload).toLocaleDateString('fr-FR')}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {formaterTaille(doc.taille_fichier)}
+                      </td>
+                      <td className="px-4 py-3 flex gap-2">
+                        <button
+                          onClick={() => handleTelecharger(doc)}
+                          className="px-3 py-1 bg-blue-100 text-blue-700
+                            rounded hover:bg-blue-200 text-xs font-medium"
+                        >
+                          Télécharger
+                        </button>
+                        {role === 'admin' && (
+                          <button
+                            onClick={() => handleSupprimer(doc.id)}
+                            className="px-3 py-1 bg-red-100 text-red-700
+                              rounded hover:bg-red-200 text-xs font-medium"
+                          >
+                            Supprimer
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Vue cartes sur mobile */}
+          <div className="md:hidden flex flex-col gap-3">
+            {documents.map((doc) => (
+              <div key={doc.id}
+                className="bg-white rounded-xl shadow p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <p className="font-semibold text-blue-900 text-sm flex-1">
                     {doc.titre}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium
-                      ${couleurType[doc.type_document] || 'bg-gray-100 text-gray-600'}`}>
-                      {doc.type_document || 'Non classifié'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium
-                      ${couleurConf[doc.niveau_confidentialite] || 'bg-gray-100'}`}>
-                      {doc.niveau_confidentialite}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">
+                  </p>
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs
+                    font-medium ${couleurConf[doc.niveau_confidentialite]
+                      || 'bg-gray-100'}`}>
+                    {doc.niveau_confidentialite}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-3">
+                  <span className={`px-2 py-0.5 rounded-full font-medium
+                    ${couleurType[doc.type_document]
+                      || 'bg-gray-100 text-gray-600'}`}>
+                    {doc.type_document || 'Non classifié'}
+                  </span>
+                  <span>
                     {new Date(doc.date_upload).toLocaleDateString('fr-FR')}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {formaterTaille(doc.taille_fichier)}
-                  </td>
-                  <td className="px-4 py-3 flex gap-2">
+                  </span>
+                  <span>{formaterTaille(doc.taille_fichier)}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleTelecharger(doc)}
+                    className="flex-1 py-1.5 bg-blue-100 text-blue-700
+                      rounded text-xs font-medium"
+                  >
+                    Télécharger
+                  </button>
+                  {role === 'admin' && (
                     <button
-                      onClick={() => handleTelecharger(doc)}
-                      className="px-3 py-1 bg-blue-100 text-blue-700
-                        rounded hover:bg-blue-200 text-xs font-medium"
+                      onClick={() => handleSupprimer(doc.id)}
+                      className="flex-1 py-1.5 bg-red-100 text-red-700
+                        rounded text-xs font-medium"
                     >
-                      Télécharger
+                      Supprimer
                     </button>
-                    {(role === 'admin') && (
-                      <button
-                        onClick={() => handleSupprimer(doc.id)}
-                        className="px-3 py-1 bg-red-100 text-red-700
-                          rounded hover:bg-red-200 text-xs font-medium"
-                      >
-                        Supprimer
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
