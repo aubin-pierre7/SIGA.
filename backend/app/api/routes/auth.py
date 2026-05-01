@@ -221,3 +221,47 @@ def obtenir_tous_utilisateurs(
     """
     utilisateurs = db.query(User).all()
     return utilisateurs
+
+# Route pour supprimer un utilisateur (admin seulement)
+@router.delete("/utilisateurs/{utilisateur_id}")
+async def supprimer_utilisateur(
+    utilisateur_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    utilisateur_actuel = Depends(admin_seulement)
+):
+    """
+    Route pour supprimer un utilisateur du système.
+    
+    - Réservée aux administrateurs uniquement
+    - Empêche un admin de se supprimer lui-même
+    - Enregistre l'action dans l'audit log
+    """
+    # Vérifier que l'utilisateur existe
+    utilisateur_a_supprimer = db.query(User).filter(User.id == utilisateur_id).first()
+    if not utilisateur_a_supprimer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilisateur non trouvé"
+        )
+    
+    # Empêcher l'admin de se supprimer lui-même
+    if utilisateur_actuel.id == utilisateur_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vous ne pouvez pas supprimer votre propre compte"
+        )
+    
+    # Enregistrer l'action dans l'audit log avant suppression
+    audit_log = AuditLog(
+        utilisateur_id=utilisateur_actuel.id,
+        action="suppression_utilisateur",
+        adresse_ip=request.client.host
+    )
+    db.add(audit_log)
+    
+    # Supprimer l'utilisateur
+    db.delete(utilisateur_a_supprimer)
+    db.commit()
+    
+    return {"message": "Utilisateur supprimé avec succès"}

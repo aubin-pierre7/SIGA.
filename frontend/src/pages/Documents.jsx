@@ -6,6 +6,9 @@ import {
   supprimerDocument
 } from '../services/api'
 import { useNavigate } from 'react-router-dom'
+import { NotificationContainer } from '../components/Notification'
+import { useNotification } from '../services/useNotification'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const couleurConf = {
   public: 'bg-green-100 text-green-700',
@@ -26,9 +29,10 @@ const couleurType = {
 const Documents = () => {
   const { role } = useAuth()
   const navigate = useNavigate()
+  const { notifications, supprimer, succes, erreur } = useNotification()
   const [documents, setDocuments] = useState([])
   const [chargement, setChargement] = useState(true)
-  const [erreur, setErreur] = useState('')
+  const [confirm, setConfirm] = useState(null)
 
   useEffect(() => { chargerDocuments() }, [])
 
@@ -38,7 +42,7 @@ const Documents = () => {
       const data = await listerDocuments()
       setDocuments(data.documents || [])
     } catch (err) {
-      setErreur('Impossible de charger les documents.')
+      erreur('Impossible de charger les documents.')
     } finally {
       setChargement(false)
     }
@@ -47,18 +51,28 @@ const Documents = () => {
   const handleTelecharger = async (doc) => {
     try {
       await telechargerDocument(doc.id, doc.nom_fichier_original)
-    } catch (err) {
-      alert('Erreur lors du téléchargement.')
+      succes(`"${doc.titre}" téléchargé avec succès.`)
+    } catch (e) {
+      erreur('Erreur lors du téléchargement.')
     }
   }
 
-  const handleSupprimer = async (id) => {
-    if (!window.confirm('Confirmer la suppression ?')) return
+  const demanderSuppression = (doc) => {
+    setConfirm({
+      message: `Voulez-vous supprimer "${doc.titre}" ? Cette action est irréversible.`,
+      id: doc.id
+    })
+  }
+
+  const confirmerSuppression = async () => {
     try {
-      await supprimerDocument(id)
+      await supprimerDocument(confirm.id)
+      succes('Document supprimé avec succès.')
       chargerDocuments()
-    } catch (err) {
-      alert('Erreur lors de la suppression.')
+    } catch (e) {
+      erreur('Erreur lors de la suppression.')
+    } finally {
+      setConfirm(null)
     }
   }
 
@@ -76,6 +90,21 @@ const Documents = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
+
+      {/* Notifications */}
+      <NotificationContainer
+        notifications={notifications}
+        supprimer={supprimer}
+      />
+
+      {/* Boîte de confirmation */}
+      {confirm && (
+        <ConfirmDialog
+          message={confirm.message}
+          onConfirmer={confirmerSuppression}
+          onAnnuler={() => setConfirm(null)}
+        />
+      )}
 
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:justify-between
@@ -99,16 +128,15 @@ const Documents = () => {
         )}
       </div>
 
-      {erreur && <p className="text-red-500 mb-4">{erreur}</p>}
-
       {documents.length === 0 ? (
         <div className="bg-white rounded-xl shadow p-12 text-center">
           <p className="text-gray-400">Aucun document archivé.</p>
         </div>
       ) : (
         <>
-          {/* Vue tableau sur grand écran */}
-          <div className="hidden md:block bg-white rounded-xl shadow overflow-hidden">
+          {/* Tableau desktop */}
+          <div className="hidden md:block bg-white rounded-xl
+            shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-blue-900 text-white">
@@ -142,7 +170,8 @@ const Documents = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-500">
-                        {new Date(doc.date_upload).toLocaleDateString('fr-FR')}
+                        {new Date(doc.date_upload)
+                          .toLocaleDateString('fr-FR')}
                       </td>
                       <td className="px-4 py-3 text-gray-500">
                         {formaterTaille(doc.taille_fichier)}
@@ -157,7 +186,7 @@ const Documents = () => {
                         </button>
                         {role === 'admin' && (
                           <button
-                            onClick={() => handleSupprimer(doc.id)}
+                            onClick={() => demanderSuppression(doc)}
                             className="px-3 py-1 bg-red-100 text-red-700
                               rounded hover:bg-red-200 text-xs font-medium"
                           >
@@ -172,11 +201,10 @@ const Documents = () => {
             </div>
           </div>
 
-          {/* Vue cartes sur mobile */}
+          {/* Cartes mobile */}
           <div className="md:hidden flex flex-col gap-3">
             {documents.map((doc) => (
-              <div key={doc.id}
-                className="bg-white rounded-xl shadow p-4">
+              <div key={doc.id} className="bg-white rounded-xl shadow p-4">
                 <div className="flex justify-between items-start mb-2">
                   <p className="font-semibold text-blue-900 text-sm flex-1">
                     {doc.titre}
@@ -187,7 +215,8 @@ const Documents = () => {
                     {doc.niveau_confidentialite}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-3">
+                <div className="flex flex-wrap gap-2 text-xs
+                  text-gray-500 mb-3">
                   <span className={`px-2 py-0.5 rounded-full font-medium
                     ${couleurType[doc.type_document]
                       || 'bg-gray-100 text-gray-600'}`}>
@@ -208,7 +237,7 @@ const Documents = () => {
                   </button>
                   {role === 'admin' && (
                     <button
-                      onClick={() => handleSupprimer(doc.id)}
+                      onClick={() => demanderSuppression(doc)}
                       className="flex-1 py-1.5 bg-red-100 text-red-700
                         rounded text-xs font-medium"
                     >
