@@ -21,7 +21,7 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 def upload_document(
     fichier: UploadFile = File(...),
     titre: str = Form(..., min_length=2),
-    niveau_confidentialite: str = Form("interne"),
+    niveau_confidentialite: str = Form(...),
     utilisateur_actuel = Depends(agent_ou_admin),
     request: Request = None,
     db: Session = Depends(get_db)
@@ -30,7 +30,8 @@ def upload_document(
     Upload un document avec chiffrement AES-256-GCM.
     
     Seuls les agents et administrateurs peuvent uploader des documents.
-    Le fichier est chiffré avant sauvegarde et les métadonnées sont stockées.
+    Le fichier est chiffré avant sauvegarde et un hash SHA-256 est calculé
+    pour vérifier l'intégrité du document à tout moment.
     """
     # Récupérer l'adresse IP
     adresse_ip = request.client.host if request else "127.0.0.1"
@@ -57,7 +58,8 @@ def lister_tous_documents(
     Liste les documents selon les permissions de l'utilisateur.
     
     Les administrateurs voient tous les documents,
-    les autres utilisateurs voient seulement leurs propres documents.
+    les agents voient seulement leurs propres documents,
+    les lecteurs ne voient que les documents publics.
     """
     resultat = lister_documents(
         db=db,
@@ -80,14 +82,8 @@ def obtenir_document(
     Tous les utilisateurs peuvent voir les détails des documents,
     mais seules les permissions de téléchargement s'appliquent.
     """
-    # Chercher le document (selon les permissions de l'utilisateur)
-    if utilisateur_actuel.role == "admin":
-        document = db.query(Document).filter(Document.id == document_id).first()
-    else:
-        document = db.query(Document).filter(
-            Document.id == document_id,
-            Document.uploade_par == utilisateur_actuel.id
-        ).first()
+    # Chercher le document
+    document = db.query(Document).filter(Document.id == document_id).first()
     
     if not document:
         raise HTTPException(status_code=404, detail="Document non trouvé")
@@ -116,6 +112,7 @@ def telecharger_document_route(
         db=db,
         document_id=document_id,
         utilisateur_id=utilisateur_actuel.id,
+        role=utilisateur_actuel.role,
         adresse_ip=adresse_ip
     )
     
