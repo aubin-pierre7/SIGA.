@@ -42,9 +42,15 @@ const Navbar = () => {
               Documents
             </Link>
             {(role === 'admin' || role === 'agent') && (
-              <Link to="/upload" className="text-blue-900 hover:text-yellow-600">
-                Upload
-              </Link>
+              <>
+                <Link to="/upload" className="text-blue-900 hover:text-yellow-600">
+                  Upload
+                </Link>
+                <Link to="/ocr" className="text-blue-900 hover:text-yellow-600 font-bold
+                  bg-yellow-100 px-2 py-1 rounded">
+                  📸 Scanner
+                </Link>
+              </>
             )}
             {role === 'admin' && (
               <>
@@ -131,13 +137,22 @@ const Navbar = () => {
                 Documents
               </Link>
               {(role === 'admin' || role === 'agent') && (
-                <Link
-                  to="/upload"
-                  onClick={() => setMenuOuvert(false)}
-                  className="text-blue-900 py-1"
-                >
-                  Upload
-                </Link>
+                <>
+                  <Link
+                    to="/upload"
+                    onClick={() => setMenuOuvert(false)}
+                    className="text-blue-900 py-1"
+                  >
+                    Upload
+                  </Link>
+                  <Link
+                    to="/ocr"
+                    onClick={() => setMenuOuvert(false)}
+                    className="text-blue-900 py-1 font-bold bg-yellow-100 px-2 rounded"
+                  >
+                    📸 Scanner
+                  </Link>
+                </>
               )}
               {role === 'admin' && (
                 <>
