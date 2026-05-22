@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./services/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -6,6 +7,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Documents from "./pages/Documents";
 import Upload from "./pages/Upload";
+import OCRUpload from "./pages/OCRUpload";
 import Audit from "./pages/Audit";
 import { useAuth } from "./services/useAuth";
 import Utilisateurs from "./pages/Utilisateurs";
@@ -57,6 +59,15 @@ function App() {
                 <>
                   <LayoutAvecNavbar />
                   <Upload />
+                </>
+              }
+            />
+            <Route
+              path="/ocr"
+              element={
+                <>
+                  <LayoutAvecNavbar />
+                  <OCRUpload />
                 </>
               }
             />
