@@ -6,7 +6,7 @@ import os
 from .core.config import settings
 from .core.database import engine, Base
 from .core.init_db import init_db
-from .api.routes import auth, documents, audit
+from .api.routes import auth, documents, audit, ocr
 from .models.user import User
 from .models.document import Document
 from .models.audit import AuditLog
@@ -53,3 +53,4 @@ def health_check():
 app.include_router(auth.router, prefix="/api", tags=["auth"])
 app.include_router(documents.router, prefix="/api", tags=["documents"])
 app.include_router(audit.router, prefix="/api", tags=["audit"])
+app.include_router(ocr.router, prefix="/api", tags=["ocr"])
