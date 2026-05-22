@@ -55,11 +55,13 @@ def inscription_utilisateur(
     db.commit()
     db.refresh(nouvel_utilisateur)
     
-    # Enregistrer dans l'audit log
+    # Enregistrer dans l'audit log avec détails enrichis
+    details_audit = f"Nouvel utilisateur créé : {utilisateur.prenom} {utilisateur.nom} ({utilisateur.email}) | Rôle: {utilisateur.role}"
     audit_log = AuditLog(
         utilisateur_id=nouvel_utilisateur.id,
         action="inscription",
-        adresse_ip=request.client.host
+        adresse_ip=request.client.host,
+        details=details_audit
     )
     db.add(audit_log)
     db.commit()
@@ -85,15 +87,21 @@ def connexion_utilisateur(
     
     # Vérifier le mot de passe
     if not utilisateur_db or not verifier_mot_de_passe(utilisateur.mot_de_passe, utilisateur_db.mot_de_passe):
-        # Enregistrer l'échec de connexion dans l'audit log
+        # Enregistrer l'échec de connexion dans l'audit log avec détails enrichis
         if utilisateur_db:
+            details_audit = f"Tentative échouée avec mauvais mot de passe | Email: {utilisateur.email}"
             audit_log = AuditLog(
                 utilisateur_id=utilisateur_db.id,
                 action="echec_connexion",
-                adresse_ip=request.client.host
+                adresse_ip=request.client.host,
+                details=details_audit
             )
             db.add(audit_log)
             db.commit()
+        else:
+            # Email non trouvé
+            details_audit = f"Tentative échouée avec email inexistant | Email: {utilisateur.email}"
+            # On ne peut pas enregistrer sans utilisateur_id, on continue juste
         
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -112,11 +120,13 @@ def connexion_utilisateur(
     donnees_token = {"sub": utilisateur_db.email, "role": utilisateur_db.role}
     access_token = creer_token_acces(donnees_token)
     
-    # Enregistrer la connexion réussie dans l'audit log
+    # Enregistrer la connexion réussie dans l'audit log avec détails enrichis
+    details_audit = f"Connexion réussie | Email: {utilisateur_db.email} | Rôle: {utilisateur_db.role}"
     audit_log = AuditLog(
         utilisateur_id=utilisateur_db.id,
         action="connexion",
-        adresse_ip=request.client.host
+        adresse_ip=request.client.host,
+        details=details_audit
     )
     db.add(audit_log)
     db.commit()
@@ -151,12 +161,14 @@ def obtenir_token_oauth2(
     
     # Vérifier le mot de passe
     if not utilisateur_db or not verifier_mot_de_passe(mot_de_passe, utilisateur_db.mot_de_passe):
-        # Enregistrer l'échec de connexion dans l'audit log
+        # Enregistrer l'échec de connexion dans l'audit log avec détails enrichis
         if utilisateur_db:
+            details_audit = f"Tentative OAuth2 échouée avec mauvais mot de passe | Email: {email}"
             audit_log = AuditLog(
                 utilisateur_id=utilisateur_db.id,
                 action="echec_connexion",
-                adresse_ip=request.client.host if request else "127.0.0.1"
+                adresse_ip=request.client.host if request else "127.0.0.1",
+                details=details_audit
             )
             db.add(audit_log)
             db.commit()
@@ -178,11 +190,13 @@ def obtenir_token_oauth2(
     donnees_token = {"sub": utilisateur_db.email, "role": utilisateur_db.role}
     access_token = creer_token_acces(donnees_token)
     
-    # Enregistrer la connexion réussie dans l'audit log
+    # Enregistrer la connexion réussie dans l'audit log avec détails enrichis
+    details_audit = f"Connexion OAuth2 réussie | Email: {utilisateur_db.email} | Rôle: {utilisateur_db.role}"
     audit_log = AuditLog(
         utilisateur_id=utilisateur_db.id,
         action="connexion",
-        adresse_ip=request.client.host if request else "127.0.0.1"
+        adresse_ip=request.client.host if request else "127.0.0.1",
+        details=details_audit
     )
     db.add(audit_log)
     db.commit()
@@ -252,11 +266,18 @@ async def supprimer_utilisateur(
             detail="Vous ne pouvez pas supprimer votre propre compte"
         )
     
-    # Enregistrer l'action dans l'audit log avant suppression
+    # Récupérer les informations de l'utilisateur à supprimer avant suppression
+    nom_utilisateur_supprime = f"{utilisateur_a_supprimer.prenom} {utilisateur_a_supprimer.nom}"
+    email_utilisateur_supprime = utilisateur_a_supprimer.email
+    role_utilisateur_supprime = utilisateur_a_supprimer.role
+    
+    # Enregistrer l'action dans l'audit log avant suppression avec détails enrichis
+    details_audit = f"Utilisateur supprimé : {nom_utilisateur_supprime} ({email_utilisateur_supprime}) | Rôle: {role_utilisateur_supprime} | Supprimé par: {utilisateur_actuel.prenom} {utilisateur_actuel.nom}"
     audit_log = AuditLog(
         utilisateur_id=utilisateur_actuel.id,
         action="suppression_utilisateur",
-        adresse_ip=request.client.host
+        adresse_ip=request.client.host,
+        details=details_audit
     )
     db.add(audit_log)
     

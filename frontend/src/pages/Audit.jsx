@@ -8,6 +8,7 @@ const couleurAction = {
   suppression: 'bg-red-100 text-red-700',
   echec_connexion: 'bg-orange-100 text-orange-700',
   inscription: 'bg-gray-100 text-gray-700',
+  suppression_utilisateur: 'bg-red-100 text-red-700',
 }
 
 const Audit = () => {
@@ -76,6 +77,8 @@ const Audit = () => {
             <option value="telechargement">Téléchargement</option>
             <option value="suppression">Suppression</option>
             <option value="echec_connexion">Échec connexion</option>
+            <option value="inscription">Inscription</option>
+            <option value="suppression_utilisateur">Suppression utilisateur</option>
           </select>
           <button
             onClick={chargerLogs}
@@ -110,7 +113,7 @@ const Audit = () => {
               ) : (
                 logsFiltres.map((log) => (
                   <tr key={log.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">
                       {new Date(log.date_action).toLocaleString('fr-FR')}
                     </td>
                     <td className="px-4 py-3">
@@ -120,17 +123,17 @@ const Audit = () => {
                         {log.action}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {log.utilisateur_id || '—'}
+                    <td className="px-4 py-3 text-gray-700 font-medium">
+                      {log.utilisateur_nom}
                     </td>
                     <td className="px-4 py-3 text-gray-700">
-                      {log.document_id || '—'}
+                      {log.document_titre}
                     </td>
-                    <td className="px-4 py-3 text-gray-500">
-                      {log.adresse_ip || '—'}
+                    <td className="px-4 py-3 text-gray-500 text-xs">
+                      {log.adresse_ip}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 max-w-xs truncate">
-                      {log.details || '—'}
+                    <td className="px-4 py-3 text-gray-500 max-w-xs truncate text-xs">
+                      {log.details}
                     </td>
                   </tr>
                 ))
@@ -158,14 +161,22 @@ const Audit = () => {
                   {new Date(log.date_action).toLocaleString('fr-FR')}
                 </span>
               </div>
-              <p className="text-xs text-gray-500">
-                IP : {log.adresse_ip || '—'}
-              </p>
-              {log.details && (
-                <p className="text-xs text-gray-500 mt-1 truncate">
-                  {log.details}
+              <div className="space-y-1 text-xs">
+                <p className="font-medium text-gray-700">
+                  👤 {log.utilisateur_nom}
                 </p>
-              )}
+                <p className="text-gray-500">
+                  📄 {log.document_titre}
+                </p>
+                <p className="text-gray-500">
+                  🌐 {log.adresse_ip}
+                </p>
+                {log.details !== '—' && (
+                  <p className="text-gray-600 mt-2 bg-gray-50 p-2 rounded">
+                    ℹ️ {log.details}
+                  </p>
+                )}
+              </div>
             </div>
           ))
         )}

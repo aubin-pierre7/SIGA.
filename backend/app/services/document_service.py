@@ -3,6 +3,7 @@
 from ..core.encryption import chiffrer_fichier, dechiffrer_fichier, calculer_hash_sha256
 from ..models.document import Document
 from ..models.audit import AuditLog
+from ..models.user import User
 from ..core.config import settings
 import uuid, os
 from fastapi import HTTPException
@@ -84,8 +85,10 @@ def sauvegarder_document(db: Session, fichier, titre: str, niveau_confidentialit
     if not niveau_confidentialite or niveau_confidentialite.strip() == "":
         analyse = analyser_confidentialite(texte)
         niveau_final = analyse["niveau_suggere"]
+        source_confidentialite = "IA"
     else:
         niveau_final = niveau_confidentialite
+        source_confidentialite = "utilisateur"
     
     # Calculer le hash SHA-256 du fichier original
     hash_sha256 = calculer_hash_sha256(contenu)
@@ -121,8 +124,8 @@ def sauvegarder_document(db: Session, fichier, titre: str, niveau_confidentialit
     db.commit()
     db.refresh(document)
     
-    # Enregistrer dans l'audit avec détails des analyses IA
-    details_audit = f"Document '{titre}' uploadé | Catégorie IA: {categorie} | Confidentialité: {niveau_final}"
+    # Enregistrer dans l'audit avec détails enrichis
+    details_audit = f"Document '{titre}' uploadé ({len(contenu)} octets) | Catégorie IA: {categorie} | Confidentialité: {niveau_final} ({source_confidentialite}) | Hash: {hash_sha256[:16]}..."
     enregistrer_audit(
         db=db,
         utilisateur_id=utilisateur_id,
@@ -174,14 +177,15 @@ def telecharger_document(db: Session, document_id: int, utilisateur_id: int, adr
     # Déchiffrer le fichier
     contenu_original = dechiffrer_fichier(contenu_chiffre)
     
-    # Enregistrer dans l'audit
+    # Enregistrer dans l'audit avec détails enrichis
+    details_audit = f"Document '{document.titre}' téléchargé ({document.taille_fichier} octets) | Confid: {document.niveau_confidentialite}"
     enregistrer_audit(
         db=db,
         utilisateur_id=utilisateur_id,
         action="telechargement",
         adresse_ip=adresse_ip,
         document_id=document_id,
-        details=f"Document '{document.titre}' téléchargé"
+        details=details_audit
     )
     
     return contenu_original, document.nom_fichier_original
@@ -247,6 +251,10 @@ def supprimer_document(db: Session, document_id: int, utilisateur_id: int,
             detail="Vous n'avez pas la permission de supprimer ce document"
         )
     
+    # Récupérer le nom de l'utilisateur qui supprime
+    utilisateur = db.query(User).filter(User.id == utilisateur_id).first()
+    utilisateur_nom = f"{utilisateur.prenom} {utilisateur.nom}" if utilisateur else "Utilisateur inconnu"
+    
     # Supprimer le fichier physique
     chemin_fichier = os.path.join(settings.MEDIA_DIR, document.nom_fichier_chiffre)
     if os.path.exists(chemin_fichier):
@@ -260,14 +268,15 @@ def supprimer_document(db: Session, document_id: int, utilisateur_id: int,
     db.delete(document)
     db.commit()
     
-    # Enregistrer dans l'audit
+    # Enregistrer dans l'audit avec détails enrichis
+    details_audit = f"Document '{document.titre}' supprimé par {utilisateur_nom} | Taille: {document.taille_fichier} octets | Confid: {document.niveau_confidentialite}"
     enregistrer_audit(
         db=db,
         utilisateur_id=utilisateur_id,
         action="suppression",
         adresse_ip=adresse_ip,
         document_id=document_id,
-        details=f"Document '{document.titre}' supprimé"
+        details=details_audit
     )
     
     return f"Document '{document.titre}' supprimé avec succès"
