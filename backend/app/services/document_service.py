@@ -138,29 +138,54 @@ def sauvegarder_document(db: Session, fichier, titre: str, niveau_confidentialit
     return document
 
 # Fonction pour télécharger et déchiffrer un document
-def telecharger_document(db: Session, document_id: int, utilisateur_id: int, adresse_ip: str):
+def telecharger_document(db: Session, document_id: int, utilisateur_id: int, role: str, adresse_ip: str):
     """
     Télécharge et déchiffre un document.
     
     Recherche le document en base, lit le fichier chiffré,
     le déchiffre et enregistre l'action dans l'audit.
     
+    Respecte les permissions :
+    - Admin : peut télécharger tous les documents
+    - Agent : peut télécharger uniquement ses propres documents
+    - Lecteur : peut télécharger uniquement les documents publics
+    
     Args:
         db (Session): Session de base de données
         document_id (int): ID du document à télécharger
         utilisateur_id (int): ID de l'utilisateur qui télécharge
+        role (str): Rôle de l'utilisateur (admin, agent, lecteur)
         adresse_ip (str): Adresse IP de l'utilisateur
         
     Returns:
         tuple: (contenu_déchiffré, nom_fichier_original)
         
     Raises:
-        HTTPException: Si document non trouvé ou fichier manquant
+        HTTPException: Si document non trouvé, fichier manquant ou permissions insuffisantes
     """
     # Chercher le document en base
     document = db.query(Document).filter(Document.id == document_id).first()
     if not document:
         raise HTTPException(status_code=404, detail="Document non trouvé")
+    
+    # Vérifier les permissions selon le rôle
+    if role == "admin":
+        # Admin : accès à tous les documents
+        pass
+    elif role == "agent":
+        # Agent : ne peut télécharger que ses propres documents
+        if document.uploade_par != utilisateur_id:
+            raise HTTPException(
+                status_code=403, 
+                detail="Vous n'avez pas la permission de télécharger ce document"
+            )
+    elif role == "lecteur":
+        # Lecteur : ne peut télécharger que les documents publics
+        if document.niveau_confidentialite != "public":
+            raise HTTPException(
+                status_code=403, 
+                detail="Vous n'avez accès qu'aux documents publics"
+            )
     
     # Vérifier que le fichier physique existe
     chemin_fichier = os.path.join(settings.MEDIA_DIR, document.nom_fichier_chiffre)
@@ -195,13 +220,15 @@ def lister_documents(db: Session, utilisateur_id: int, role: str):
     """
     Liste les documents selon les permissions de l'utilisateur.
     
-    Les administrateurs voient tous les documents,
-    les autres utilisateurs voient seulement leurs propres documents.
+    Les permissions sont :
+    - Admin : voit TOUS les documents de TOUS les utilisateurs
+    - Agent : voit UNIQUEMENT ses propres documents
+    - Lecteur : voit UNIQUEMENT les documents marqués "public"
     
     Args:
         db (Session): Session de base de données
         utilisateur_id (int): ID de l'utilisateur
-        role (str): Rôle de l'utilisateur
+        role (str): Rôle de l'utilisateur (admin, agent, lecteur)
         
     Returns:
         dict: {"documents": liste_documents, "total": nombre_total}
@@ -209,9 +236,14 @@ def lister_documents(db: Session, utilisateur_id: int, role: str):
     if role == "admin":
         # Administrateur : tous les documents
         documents = db.query(Document).all()
-    else:
-        # Autres rôles : seulement leurs propres documents
+    elif role == "agent":
+        # Agent : seulement ses propres documents
         documents = db.query(Document).filter(Document.uploade_par == utilisateur_id).all()
+    elif role == "lecteur":
+        # Lecteur : seulement les documents publics
+        documents = db.query(Document).filter(Document.niveau_confidentialite == "public").all()
+    else:
+        documents = []
     
     return {
         "documents": documents,
@@ -224,7 +256,10 @@ def supprimer_document(db: Session, document_id: int, utilisateur_id: int,
     """
     Supprime un document (fichier physique et entrée base de données).
     
-    Seuls le propriétaire ou un administrateur peuvent supprimer.
+    Les permissions sont :
+    - Admin : peut supprimer n'importe quel document
+    - Agent : ne peut supprimer que ses propres documents
+    - Lecteur : ne peut pas supprimer
     
     Args:
         db (Session): Session de base de données
@@ -244,12 +279,21 @@ def supprimer_document(db: Session, document_id: int, utilisateur_id: int,
     if not document:
         raise HTTPException(status_code=404, detail="Document non trouvé")
     
-    # Vérifier les permissions
-    if role != "admin" and document.uploade_par != utilisateur_id:
+    # Vérifier les permissions selon le rôle
+    if role == "lecteur":
+        # Lecteur : ne peut pas supprimer
         raise HTTPException(
             status_code=403, 
-            detail="Vous n'avez pas la permission de supprimer ce document"
+            detail="Vous n'avez pas la permission de supprimer des documents"
         )
+    elif role == "agent":
+        # Agent : ne peut supprimer que ses propres documents
+        if document.uploade_par != utilisateur_id:
+            raise HTTPException(
+                status_code=403, 
+                detail="Vous pouvez uniquement supprimer vos propres documents"
+            )
+    # Admin : peut tout supprimer, pas besoin de vérification
     
     # Récupérer le nom de l'utilisateur qui supprime
     utilisateur = db.query(User).filter(User.id == utilisateur_id).first()
