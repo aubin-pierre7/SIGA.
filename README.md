@@ -749,10 +749,10 @@ Ce projet est à usage académique (DUT Informatique). Libre de réutilisation p
 
 ## ✍️ Auteur
 
-**Aubin Pierre**
+**aubin-pierre7**
 - 🎓 DUT Informatique (2026)
-- 📧 aubin.pierre@student.fr
-- 🔗 [GitHub](https://github.com/aubinpierre)
+- 📧 aubinp58@gmail.com
+- 🔗 [GitHub](https://github.com/aubin-pierre7)
 
 ---
 
