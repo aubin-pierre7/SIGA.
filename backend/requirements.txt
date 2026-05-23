@@ -16,3 +16,4 @@ requests
 argon2-cffi
 python-jose
 PyJWT
+paddlepaddle
