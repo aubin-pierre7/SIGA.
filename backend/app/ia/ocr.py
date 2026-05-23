@@ -16,7 +16,7 @@ def initialiser_ocr():
     """
     global ocr
     if ocr is None:
-        ocr = PaddleOCR(use_angle_cls=True, lang='fr', use_gpu=False)
+        ocr = PaddleOCR(use_angle_cls=True, lang='fr')
     return ocr
 
 def extraire_texte_ocr(contenu_fichier: bytes, nom_fichier: str) -> dict:

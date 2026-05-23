@@ -3,21 +3,19 @@ import { uploaderDocument } from '../services/api'
 import { useNotification } from '../services/useNotification'
 
 const OCRUpload = () => {
-  const { montrerNotification } = useNotification()
+  const { succes, erreur, attention } = useNotification()
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   
-  const [mode, setMode] = useState('choix') // 'choix' | 'camera' | 'upload' | 'preview' | 'formulaire'
+  const [mode, setMode] = useState('choix')
   const [fichier, setFichier] = useState(null)
   const [cameraActive, setCameraActive] = useState(false)
   const [photoCapturee, setPhotoCapturee] = useState(null)
   
-  // État OCR
   const [resultatOCR, setResultatOCR] = useState(null)
   const [chargementOCR, setChargementOCR] = useState(false)
   const [erreurOCR, setErreurOCR] = useState('')
   
-  // État formulaire
   const [titre, setTitre] = useState('')
   const [confidentialite, setConfidentialite] = useState('')
   const [texteExtrait, setTexteExtrait] = useState('')
@@ -39,13 +37,10 @@ const OCRUpload = () => {
         videoRef.current.srcObject = stream
         setCameraActive(true)
         setMode('camera')
-        montrerNotification('Caméra activée. Positionnez le document.', 'succes')
+        succes('Caméra activée. Positionnez le document.')
       }
     } catch (err) {
-      montrerNotification(
-        'Impossible d\'accéder à la caméra. Vérifiez les permissions.',
-        'erreur'
-      )
+      erreur('Impossible d\'accéder à la caméra. Vérifiez les permissions.')
     }
   }
 
@@ -73,7 +68,7 @@ const OCRUpload = () => {
       setFichier(fichierPhoto)
       setPhotoCapturee(canvasRef.current.toDataURL('image/jpeg'))
       setMode('preview')
-      montrerNotification('Photo capturée. Prêt pour l\'OCR.', 'succes')
+      succes('Photo capturée. Prêt pour l\'OCR.')
     }, 'image/jpeg', 0.95)
   }
 
@@ -89,14 +84,14 @@ const OCRUpload = () => {
     if (file) {
       setFichier(file)
       setMode('upload')
-      montrerNotification('Image uploadée. Remplissez le formulaire.', 'succes')
+      succes('Image uploadée. Remplissez le formulaire.')
     }
   }
 
   // Lancer l'OCR
   const lancerOCR = async () => {
     if (!fichier) {
-      montrerNotification('Sélectionnez une image d\'abord', 'erreur')
+      erreur('Sélectionnez une image d\'abord')
       return
     }
 
@@ -124,7 +119,7 @@ const OCRUpload = () => {
 
       if (!data.succes) {
         setErreurOCR(data.erreur || 'OCR échoué')
-        montrerNotification('OCR échoué. Remplissez manuellement.', 'avertissement')
+        attention('OCR échoué. Remplissez manuellement.')
         return
       }
 
@@ -133,7 +128,7 @@ const OCRUpload = () => {
       setTitre(data.titre_suggere)
       setConfidentialite(data.confidentialite_suggeree)
       setTexteExtrait(data.texte)
-      montrerNotification('OCR réussi ! Vérifiez les suggestions', 'succes')
+      succes('OCR réussi ! Vérifiez les suggestions')
       
       if (cameraActive) {
         arreterCamera()
@@ -141,7 +136,7 @@ const OCRUpload = () => {
 
     } catch (err) {
       setErreurOCR(err.message)
-      montrerNotification('Erreur OCR', 'erreur')
+      erreur('Erreur OCR')
     } finally {
       setChargementOCR(false)
     }
@@ -152,17 +147,17 @@ const OCRUpload = () => {
     e.preventDefault()
 
     if (!titre.trim()) {
-      montrerNotification('Le titre est obligatoire', 'erreur')
+      erreur('Le titre est obligatoire')
       return
     }
 
     if (!confidentialite) {
-      montrerNotification('Choisissez un niveau de confidentialité', 'erreur')
+      erreur('Choisissez un niveau de confidentialité')
       return
     }
 
     if (!fichier) {
-      montrerNotification('Sélectionnez une image', 'erreur')
+      erreur('Sélectionnez une image')
       return
     }
 
@@ -176,7 +171,7 @@ const OCRUpload = () => {
 
       await uploaderDocument(formData)
 
-      montrerNotification(`Document "${titre}" archivé !`, 'succes')
+      succes(`Document "${titre}" archivé !`)
 
       // Réinitialiser
       setFichier(null)
@@ -188,7 +183,7 @@ const OCRUpload = () => {
       setMode('choix')
 
     } catch (err) {
-      montrerNotification('Erreur lors de l\'archivage', 'erreur')
+      erreur('Erreur lors de l\'archivage')
     } finally {
       setChargementArchivage(false)
     }
