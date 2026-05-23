@@ -1,33 +1,37 @@
-import { useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./services/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Navbar from "./components/Navbar";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Documents from "./pages/Documents";
-import Upload from "./pages/Upload";
-import OCRUpload from "./pages/OCRUpload";
-import Audit from "./pages/Audit";
-import { useAuth } from "./services/useAuth";
-import Utilisateurs from "./pages/Utilisateurs";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import { AuthProvider } from "./services/AuthContext"
+import ProtectedRoute from "./components/ProtectedRoute"
+import Navbar from "./components/Navbar"
+import { NotificationContainer } from "./components/Notification"
+import { useNotification } from "./services/useNotification"
+import Login from "./pages/Login"
+import Dashboard from "./pages/Dashboard"
+import Documents from "./pages/Documents"
+import Upload from "./pages/Upload"
+import OCRUpload from "./pages/OCRUpload"
+import Audit from "./pages/Audit"
+import { useAuth } from "./services/useAuth"
+import Utilisateurs from "./pages/Utilisateurs"
 
-// Layout avec Navbar pour les pages protégées
 const LayoutAvecNavbar = () => {
-  const { estConnecte } = useAuth();
-  if (!estConnecte && !localStorage.getItem("siga_token")) return null;
-  return <Navbar />;
-};
+  const { estConnecte } = useAuth()
+  if (!estConnecte && !localStorage.getItem("siga_token")) return null
+  return <Navbar />
+}
 
 function App() {
+  const { notifications, supprimer } = useNotification()
+
   return (
     <BrowserRouter>
       <AuthProvider>
+        <NotificationContainer notifications={notifications} supprimer={supprimer} />
+        
         <Routes>
           {/* Route publique */}
           <Route path="/login" element={<Login />} />
 
-          {/* Routes protégées avec Navbar */}
+          {/* Routes protégées */}
           <Route element={<ProtectedRoute />}>
             <Route
               path="/dashboard"
@@ -100,7 +104,7 @@ function App() {
         </Routes>
       </AuthProvider>
     </BrowserRouter>
-  );
+  )
 }
 
-export default App;
+export default App
