@@ -222,14 +222,10 @@ const OCRUpload = () => {
             </p>
           </button>
 
-          {/* Bouton Upload */}
-          <button
-            onClick={() => {
-              setMode('upload')
-              document.getElementById('file-input').click()
-            }}
+          {/* Bouton Upload avec label */}
+          <label
             className="bg-white rounded-xl shadow p-8 text-center hover:shadow-lg
-              hover:border-blue-500 border-2 border-transparent transition"
+              hover:border-blue-500 border-2 border-transparent transition cursor-pointer"
           >
             <div className="text-4xl mb-3">📁</div>
             <h3 className="font-semibold text-blue-900 mb-1">
@@ -238,20 +234,19 @@ const OCRUpload = () => {
             <p className="text-sm text-gray-500">
               Sélectionnez une image depuis votre ordinateur
             </p>
-          </button>
-
-          <input
-            id="file-input"
-            type="file"
-            accept=".png,.jpg,.jpeg,.pdf"
-            onChange={(e) => {
-              if (e.target.files[0]) {
-                setFichier(e.target.files[0])
-                setMode('preview')
-              }
-            }}
-            className="hidden"
-          />
+            
+            <input
+              type="file"
+              accept=".png,.jpg,.jpeg,.pdf"
+              onChange={(e) => {
+                if (e.target.files[0]) {
+                  setFichier(e.target.files[0])
+                  setMode('preview')
+                }
+              }}
+              className="hidden"
+            />
+          </label>
 
         </div>
       )}
