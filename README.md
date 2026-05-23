@@ -78,62 +78,313 @@ Le système est conçu pour être sécurisé, performant et respectueux de la vi
 ---
 
 ## 🏗️ Architecture
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   │   └── routes/
-│   │   │       ├── auth.py           # Authentification JWT
-│   │   │       ├── documents.py      # CRUD documents
-│   │   │       ├── audit.py          # Journal d'audit
-│   │   │       └── ocr.py            # Routes OCR
-│   │   ├── core/
-│   │   │   ├── config.py             # Configuration
-│   │   │   ├── database.py           # SQLite/PostgreSQL
-│   │   │   ├── security.py           # Hachage & JWT
-│   │   │   ├── encryption.py         # AES-256-GCM
-│   │   │   ├── init_db.py            # Initialisation BD
-│   │   │   └── dependencies.py       # Dépendances FastAPI
-│   │   ├── models/
-│   │   │   ├── user.py               # Modèle Utilisateur
-│   │   │   ├── document.py           # Modèle Document
-│   │   │   └── audit.py              # Modèle AuditLog
-│   │   ├── schemas/
-│   │   │   ├── user.py               # Validation Pydantic
-│   │   │   └── document.py           # Validation Pydantic
-│   │   ├── services/
-│   │   │   └── document_service.py   # Logique métier
-│   │   ├── ia/
-│   │   │   └── ocr.py                # Service OCR Tesseract
-│   │   └── main.py                   # Application FastAPI
-│   ├── requirements.txt               # Dépendances Python
-│   └── env/                           # Environnement virtuel
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Navbar.jsx            # Barre de navigation
-│   │   │   ├── ProtectedRoute.jsx    # Routes protégées
-│   │   │   ├── Notification.jsx      # Notifications
-│   │   │   └── ConfirmDialog.jsx     # Dialogs de confirmation
-│   │   ├── pages/
-│   │   │   ├── Login.jsx             # Page connexion
-│   │   │   ├── Dashboard.jsx         # Page d'accueil
-│   │   │   ├── Documents.jsx         # Liste documents
-│   │   │   ├── Upload.jsx            # Upload classique
-│   │   │   ├── OCRUpload.jsx         # Scanner OCR
-│   │   │   ├── Audit.jsx             # Journal d'audit
-│   │   │   └── Utilisateurs.jsx      # Gestion utilisateurs
-│   │   ├── services/
-│   │   │   ├── api.js                # Client HTTP
-│   │   │   ├── AuthContext.jsx       # Contexte auth
-│   │   │   ├── useAuth.js            # Hook auth
-│   │   │   └── useNotification.js    # Hook notifications
-│   │   ├── App.jsx                   # Routeur principal
-│   │   └── index.css                 # Styles globaux
-│   ├── package.json                  # Dépendances Node
-│   └── vite.config.js                # Config Vite
-│
-└── siga.db                           # Base SQLite (dev)
+
+## Diagramme d'architecture globale
+┌─────────────────────────────────────────────────────────────────┐
+│                     FRONTEND (React.js)                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ Login.jsx    │  │ Dashboard    │  │ OCRUpload    │          │
+│  │ Connexion    │  │ Statistiques  │  │ Scanner      │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ Documents    │  │ Upload       │  │ Audit        │          │
+│  │ Liste docs   │  │ Chiffrement   │  │ Traçabilité  │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+│           ↓                  ↓                  ↓               │
+│  Axios HTTP + JWT Token  Tailwind CSS  Notifications           │
+└─────────────────────────────────────────────────────────────────┘
+↓ API REST
+┌─────────────────────────────────────────────────────────────────┐
+│                    BACKEND (FastAPI)                            │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ Middleware CORS & Auth                                  │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
+│  │ auth.py      │  │ documents.py │  │ ocr.py       │         │
+│  │ JWT + Login  │  │ CRUD Docs    │  │ Tesseract    │         │
+│  └──────────────┘  └──────────────┘  └──────────────┘         │
+│  ┌──────────────┐  ┌──────────────┐                           │
+│  │ audit.py     │  │ utilisateurs │                           │
+│  │ Journal      │  │ Gestion      │                           │
+│  └──────────────┘  └──────────────┘                           │
+│           ↓                ↓                 ↓                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ Services & Logique métier                               │   │
+│  │ ├─ document_service.py (upload/delete/encrypt)          │   │
+│  │ ├─ encryption.py (AES-256-GCM)                          │   │
+│  │ ├─ security.py (Argon2 + JWT)                           │   │
+│  │ └─ ocr.py (Tesseract OCR)                               │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+↓ SQL                  ↓ Fichiers              ↓ OCR
+┌───────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│   Base de données │  │ Stockage fichiers│  │ Tesseract 5.5.0  │
+│ ┌───────────────┐ │  │                  │  │ - Extraction texte
+│ │ Utilisateurs  │ │  │ /documents/      │  │ - Analyse confid. │
+│ │ Documents     │ │  │ *.enc (chiffrés) │  │ - Suggestion titre│
+│ │ AuditLog      │ │  │                  │  │                  │
+│ │               │ │  │ Hash SHA-256     │  │ Langs: FR, EN    │
+│ └───────────────┘ │  │ Intégrité        │  └──────────────────┘
+│                   │  └──────────────────┘
+│ SQLite (dev)      │
+│ PostgreSQL (prod) │
+└───────────────────┘
+
+## Flux de données - Upload document
+Utilisateur
+↓
+[Choisir fichier] → [Remplir formulaire]
+↓
+Frontend (Upload.jsx)
+├─ Validation (titre, confidentialité)
+├─ Envoi FormData + JWT Token
+↓
+Backend POST /api/documents/upload
+├─ Vérifier JWT + permissions
+├─ Générer UUID + nonce
+├─ Calculer SHA-256 (intégrité)
+├─ Chiffrer contenu (AES-256-GCM)
+├─ Sauvegarder fichier .enc
+├─ Créer entrée DB Document
+├─ Logger action audit
+↓
+Frontend → Notification ✅ "Document archivé"
+↓
+Base de données (Document enregistré + chiffré)
+
+## Flux de données - OCR Scanner
+Utilisateur
+↓
+📸 Caméra ou 📁 Upload image
+↓
+Frontend (OCRUpload.jsx)
+├─ Capturer/charger image
+├─ Afficher aperçu
+├─ Envoyer à Backend
+↓
+Backend POST /api/ocr/preview
+├─ Vérifier JWT + rôle (agent/admin)
+├─ Charger image en mémoire
+├─ Lancer Tesseract OCR
+│  ├─ Extraire texte
+│  ├─ Suggérer titre (ligne 1)
+│  └─ Analyser confidentialité (mots-clés)
+├─ Retourner résultats
+↓
+Frontend → Afficher suggestions
+├─ Titre pré-rempli
+├─ Confidentialité suggérée
+└─ Texte extrait (aperçu)
+↓
+[Utilisateur valide] → Archiver = flux upload normal
+
+## Flux d'authentification
+Login (Login.jsx)
+↓
+POST /api/auth/token
+├─ Email + Mot de passe
+↓
+Backend auth.py
+├─ Chercher utilisateur BD
+├─ Vérifier mot de passe (Argon2)
+├─ Générer JWT Token
+│  └─ Payload: {sub: user_id, email, role, exp}
+├─ Retourner access_token
+↓
+Frontend
+├─ Sauvegarder JWT dans localStorage
+├─ Ajouter header Authorization: "Bearer {token}"
+├─ Accès utilisateur selon rôle
+↓
+[Token valide 30min]
+└─ Au-delà: nécessite nouvelle connexion
+
+## Hiérarchie des rôles & permissions
+┌─────────────────────────────────────────────────────┐
+│               ADMIN (Administrateur)                │
+├─────────────────────────────────────────────────────┤
+│ ✅ Upload documents                                 │
+│ ✅ Voir TOUS les documents                          │
+│ ✅ Modifier confidentialité                         │
+│ ✅ Supprimer TOUS les documents                     │
+│ ✅ Accès journal audit complet                      │
+│ ✅ Gestion utilisateurs (CRUD)                      │
+│ ✅ Accès OCR & suggestions IA                       │
+└─────────────────────────────────────────────────────┘
+↓
+┌─────────────────────────────────────────────────────┐
+│                AGENT (Agent)                        │
+├─────────────────────────────────────────────────────┤
+│ ✅ Upload documents                                 │
+│ ✅ Voir SES PROPRES documents                       │
+│ ✅ Supprimer ses propres documents                  │
+│ ✅ Accès OCR & suggestions IA                       │
+│ ❌ Voir documents d'autres agents                   │
+│ ❌ Gestion utilisateurs                             │
+│ ❌ Accès audit complet                              │
+└─────────────────────────────────────────────────────┘
+↓
+┌─────────────────────────────────────────────────────┐
+│               LECTEUR (Lecteur)                     │
+├─────────────────────────────────────────────────────┤
+│ ✅ Voir documents PUBLICS uniquement                │
+│ ✅ Télécharger documents publics                    │
+│ ❌ Upload                                           │
+│ ❌ Supprimer                                        │
+│ ❌ Gestion utilisateurs                             │
+│ ❌ Accès OCR                                        │
+│ ❌ Voir documents confidentiels                     │
+└─────────────────────────────────────────────────────┘
+
+## Flux de chiffrement AES-256-GCM
+Document original (binaire)
+↓
+Générer:
+├─ nonce (12 octets aléatoires)
+├─ clé secrète (32 octets)
+↓
+Chiffrer avec AES-256-GCM
+├─ Algorithme: Advanced Encryption Standard
+├─ Mode: Galois/Counter Mode
+├─ Taille clé: 256 bits (32 bytes)
+├─ Taille nonce: 12 bytes (96 bits)
+└─ Tag authentification: 16 bytes
+↓
+Contenu chiffré + Tag + Nonce → Fichier .enc
+↓
+Stockage sécurisé
+├─ Nom fichier: {uuid}.enc
+├─ Chemin: /documents/
+└─ BD: hash SHA-256 + métadonnées
+┌─ Déchiffrement ─┐
+│ Récupérer .enc  │
+│ + Nonce + Key   │
+│ → Vérifier Tag  │
+│ → Déchiffrer    │
+│ ← Original      │
+└─────────────────┘
+
+## Structure de la base de données
+┌────────────────────────┐
+│       Users            │
+├────────────────────────┤
+│ id (PK)                │
+│ email (UNIQUE)         │
+│ password_hash (Argon2) │
+│ full_name              │
+│ role (admin/agent...)  │
+│ created_at             │
+│ is_active              │
+└────────────────────────┘
+↓ (1:N)
+┌────────────────────────┐
+│      Documents         │
+├────────────────────────┤
+│ id (UUID)              │
+│ titre                  │
+│ user_id (FK)           │
+│ fichier_path           │
+│ hash_sha256            │
+│ nonce (IV)             │
+│ niveau_confidentialite │
+│ created_at             │
+│ updated_at             │
+│ is_deleted             │
+└────────────────────────┘
+↓ (1:N)
+┌────────────────────────┐
+│      AuditLog          │
+├────────────────────────┤
+│ id (PK)                │
+│ action                 │
+│ user_id (FK)           │
+│ document_id (FK)       │
+│ details (JSON)         │
+│ created_at             │
+└────────────────────────┘
+
+## Sécurité en couches
+┌────────────────┐
+                │   HTTPS/SSL    │
+                │  Chiffrement   │
+                │  Transport     │
+                └────────────────┘
+                       ↓
+    ┌──────────────────────────────────────┐
+    │   JWT Authentication                 │
+    │   - Expiration: 30 min               │
+    │   - Signature: HMAC-SHA256           │
+    │   - Payload: {sub, email, role, exp} │
+    └──────────────────────────────────────┘
+                       ↓
+    ┌──────────────────────────────────────┐
+    │   Role-Based Access Control (RBAC)  │
+    │   - Vérification rôle par endpoint   │
+    │   - Permissions granulaires          │
+    └──────────────────────────────────────┘
+                       ↓
+    ┌──────────────────────────────────────┐
+    │   Document Encryption                │
+    │   - AES-256-GCM                      │
+    │   - Nonce aléatoire 12 bytes         │
+    │   - Tag d'authentification           │
+    └──────────────────────────────────────┘
+                       ↓
+    ┌──────────────────────────────────────┐
+    │   Password Hashing                   │
+    │   - Argon2id                         │
+    │   - Memory cost: 65536               │
+    │   - Time cost: 2                     │
+    └──────────────────────────────────────┘
+                       ↓
+    ┌──────────────────────────────────────┐
+    │   Integrity Verification             │
+    │   - SHA-256 hash per document        │
+    │   - Vérification avant déchiffrement │
+    └──────────────────────────────────────┘
+
+## Déploiement - Architecture Cloud (Production)
+Internet
+↓
+┌──────────────┐
+│ Cloudflare   │ ← DDoS Protection, Cache, SSL
+│ CDN          │
+└──────────────┘
+↓
+┌──────────────┐
+│ Nginx/Apache │ ← Reverse Proxy, Load Balancing
+│ Reverse Proxy│
+└──────────────┘
+↓
+┌────────────────────────────────┐
+│ FastAPI (Backend)              │
+│ ├─ 3-5 instances (Gunicorn)   │
+│ ├─ Load balancing             │
+│ └─ Auto-scaling               │
+└────────────────────────────────┘
+↓
+┌────────────────────────────────┐
+│ Storage                        │
+│ ├─ PostgreSQL (DB)            │
+│ ├─ S3 / Minio (Documents)     │
+│ ├─ Redis (Cache/Session)      │
+│ └─ Vault (Secrets)            │
+└────────────────────────────────┘
+
+---
+
+## Stack complète par composant
+
+| Composant | Technos | Rôle |
+|-----------|---------|------|
+| **Frontend** | React 18 + Tailwind + Vite | Interface utilisateur |
+| **Backend** | FastAPI + Uvicorn | API REST |
+| **DB** | SQLite (dev) / PostgreSQL (prod) | Données |
+| **Chiffrement** | cryptography (AES-256-GCM) | Sécurité documents |
+| **Auth** | PyJWT + Argon2 | Authentification |
+| **OCR** | Tesseract 5.5.0 | Extraction texte |
+| **IA** | Analyse par mots-clés | Classification |
+| **DevOps** | Git + GitHub | Versioning |
 
 ---
 
