@@ -3,10 +3,10 @@
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import Optional
+import jwt
 from .config import settings
-from python_jose import JWTError, jwt
 
-# Configuration du contexte de hachage avec Argon2 (plus robuste que bcrypt)
+# Configuration du contexte de hachage avec Argon2
 pwd_context = CryptContext(
     schemes=["argon2"],
     deprecated="auto"
@@ -86,5 +86,5 @@ def decoder_token(token: str) -> Optional[dict]:
             algorithms=["HS256"]
         )
         return payload
-    except JWTError:
+    except jwt.InvalidTokenError:
         return None
