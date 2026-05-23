@@ -13,3 +13,4 @@ scikit-learn==1.8.0
 pytest==9.0.3
 paddleocr>=2.7.0
 requests
+argon2-cffi
