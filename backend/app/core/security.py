@@ -1,86 +1,90 @@
 # backend/app/core/security.py
 
-from datetime import datetime, timedelta
 from passlib.context import CryptContext
-from jose import JWTError, jwt
-from fastapi import HTTPException, status
+from datetime import datetime, timedelta
+from typing import Optional
 from .config import settings
+from python_jose import JWTError, jwt
 
-# Contexte pour le hashage des mots de passe avec bcrypt
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Configuration du contexte de hachage avec Argon2 (plus robuste que bcrypt)
+pwd_context = CryptContext(
+    schemes=["argon2"],
+    deprecated="auto"
+)
 
 # Fonction pour hasher un mot de passe
 def hasher_mot_de_passe(mot_de_passe: str) -> str:
     """
-    Hash un mot de passe en utilisant l'algorithme bcrypt.
+    Hache un mot de passe avec Argon2.
     
     Args:
-        mot_de_passe (str): Le mot de passe en clair à hasher
+        mot_de_passe (str): Le mot de passe en clair
         
     Returns:
         str: Le mot de passe hashé
     """
     return pwd_context.hash(mot_de_passe)
 
-# Fonction pour vérifier un mot de passe contre son hash
+# Fonction pour vérifier un mot de passe
 def verifier_mot_de_passe(mot_de_passe: str, hash: str) -> bool:
     """
-    Vérifie si un mot de passe en clair correspond à son hash.
+    Vérifie si un mot de passe correspond à un hash Argon2.
     
     Args:
-        mot_de_passe (str): Le mot de passe en clair à vérifier
-        hash (str): Le hash du mot de passe stocké
+        mot_de_passe (str): Le mot de passe en clair
+        hash (str): Le hash stocké en base de données
         
     Returns:
-        bool: True si le mot de passe correspond, False sinon
+        bool: True si le mot de passe est correct, False sinon
     """
     return pwd_context.verify(mot_de_passe, hash)
 
-# Fonction pour créer un token d'accès JWT
-def creer_token_acces(donnees: dict) -> str:
+# Fonction pour créer un token JWT
+def creer_token_acces(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """
-    Crée un token d'accès JWT avec une durée d'expiration.
+    Crée un token JWT d'accès avec les données fournies.
     
     Args:
-        donnees (dict): Les données à encoder dans le token
-                        (généralement l'ID utilisateur et le rôle)
+        data (dict): Données à encoder dans le token
+        expires_delta (Optional[timedelta]): Durée de validité du token
         
     Returns:
-        str: Le token JWT encodé
+        str: Le token JWT
     """
-    # Créer une copie des données pour ne pas modifier l'original
-    a_encoder = donnees.copy()
+    to_encode = data.copy()
     
-    # Ajouter la date d'expiration
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    a_encoder.update({"exp": expire})
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=30)
     
-    # Encoder le token avec la clé secrète et l'algorithme
-    token_encode = jwt.encode(a_encoder, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return token_encode
+    to_encode.update({"exp": expire})
+    
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm="HS256"
+    )
+    
+    return encoded_jwt
 
-# Fonction pour décoder et valider un token JWT
-def decoder_token(token: str) -> dict:
+# Fonction pour décoder un token JWT
+def decoder_token(token: str) -> Optional[dict]:
     """
-    Décode et valide un token JWT.
+    Décode un token JWT et retourne les données.
     
     Args:
-        token (str): Le token JWT à décoder
+        token (str): Le token JWT
         
     Returns:
-        dict: Les données décodées du token
-        
-    Raises:
-        HTTPException: Si le token est invalide ou expiré
+        Optional[dict]: Les données du token ou None si invalide
     """
     try:
-        # Décoder le token avec la clé secrète et l'algorithme
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=["HS256"]
+        )
         return payload
     except JWTError:
-        # Lever une exception HTTP 401 si le token est invalide
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token d'accès invalide ou expiré",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        return None
