@@ -1,10 +1,13 @@
 # backend/app/ia/ocr.py
 
 import pytesseract
+import os
+
+# Configurer le chemin vers Tesseract
+pytesseract.pytesseract.pytesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
 from PIL import Image
 from io import BytesIO
-import numpy as np
-import cv2
 
 def extraire_texte_ocr(contenu_fichier: bytes, nom_fichier: str) -> dict:
     """
