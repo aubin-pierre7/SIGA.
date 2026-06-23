@@ -18,10 +18,15 @@ app = FastAPI(
     description="API pour le Système Intégré de Gestion d'Archives (SIGA)"
 )
 
-# Configuration CORS pour autoriser les requêtes du frontend React sur localhost:5173
+# Configuration CORS pour autoriser les requêtes du frontend (React ancien + Next.js nouveau)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",      # Ancien frontend React Vite
+        "http://localhost:3000",      # Nouveau frontend Next.js
+        "http://127.0.0.1:3000",      # Nouveau frontend Next.js (local)
+        "http://127.0.0.1:5173",      # Ancien frontend React (local)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
