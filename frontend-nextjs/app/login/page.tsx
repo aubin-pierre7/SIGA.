@@ -24,7 +24,17 @@ export default function LoginPage() {
       await login(email, password)
       router.push('/dashboard')
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Email ou mot de passe incorrect'
+      // Gérer différents formats d'erreur
+      let errorMsg = 'Email ou mot de passe incorrect'
+      
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail
+        // Si c'est un objet, extraire le message
+        errorMsg = typeof detail === 'string' ? detail : JSON.stringify(detail)
+      } else if (err.message) {
+        errorMsg = err.message
+      }
+      
       setError(errorMsg)
     } finally {
       setLoading(false)
