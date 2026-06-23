@@ -1,10 +1,9 @@
-// src/lib/api.ts
+// lib/api.ts
 import axios, { AxiosInstance } from 'axios'
 
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000/api'
 const TOKEN_KEY = process.env.NEXT_PUBLIC_JWT_TOKEN_KEY || 'siga_token'
 
-// Instance Axios
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
@@ -12,7 +11,6 @@ const api: AxiosInstance = axios.create({
   },
 })
 
-// Intercepteur requête - Ajouter le token
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
@@ -26,7 +24,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Intercepteur réponse - Gérer les erreurs
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -42,8 +39,6 @@ api.interceptors.response.use(
 
 export default api
 
-// ==================== AUTH API ====================
-
 export const authAPI = {
   login: (email: string, password: string) =>
     api.post('/auth/token', { username: email, password }),
@@ -51,8 +46,6 @@ export const authAPI = {
   register: (email: string, password: string, fullName: string, role: string) =>
     api.post('/auth/register', { email, password, full_name: fullName, role }),
 }
-
-// ==================== DOCUMENTS API ====================
 
 export const documentsAPI = {
   getAll: () => api.get('/documents'),
@@ -69,8 +62,6 @@ export const documentsAPI = {
   delete: (id: string) => api.delete(`/documents/${id}`),
 }
 
-// ==================== OCR API ====================
-
 export const ocrAPI = {
   preview: (file: File) => {
     const formData = new FormData()
@@ -81,14 +72,10 @@ export const ocrAPI = {
   },
 }
 
-// ==================== AUDIT API ====================
-
 export const auditAPI = {
   getAll: () => api.get('/audit'),
   filterByAction: (action: string) => api.get(`/audit?action=${action}`),
 }
-
-// ==================== USERS API ====================
 
 export const usersAPI = {
   getAll: () => api.get('/utilisateurs'),
