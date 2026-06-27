@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { useState } from 'react'
-import { LayoutDashboard, FileText, Upload, Archive, Users, LogOut } from 'lucide-react'
+import { LayoutDashboard, FileText, Upload, Archive, Users, LogOut, Clock } from 'lucide-react'
 
 export default function Sidebar() {
   const { user, logout } = useAuth()
@@ -35,7 +35,7 @@ export default function Sidebar() {
     },
     {
       label: 'Archives',
-      href: '/archives',
+      href: '/dashboard/archives',
       icon: Archive,
     },
   ]
@@ -43,8 +43,14 @@ export default function Sidebar() {
   const managementItems = [
     {
       label: 'Utilisateurs',
-      href: '/utilisateurs',
+      href: '/dashboard/utilisateurs',
       icon: Users,
+      adminOnly: true,
+    },
+    {
+      label: 'Journal d\'activité',
+      href: '/dashboard/audit',
+      icon: Clock,
       adminOnly: true,
     },
   ]
