@@ -30,7 +30,7 @@ export default function Sidebar() {
     },
     {
       label: 'Télécharger',
-      href: '/upload',
+      href: '/dashboard/upload',
       icon: Upload,
     },
     {
