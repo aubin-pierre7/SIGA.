@@ -25,7 +25,7 @@ export default function Sidebar() {
     },
     {
       label: 'Documents',
-      href: '/documents',
+      href: '/dashboard/documents',
       icon: FileText,
     },
     {
