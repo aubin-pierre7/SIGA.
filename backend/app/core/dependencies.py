@@ -1,4 +1,7 @@
-# backend/app/core/dependencies.py
+# app/core/dependencies.py
+"""
+Dépendances FastAPI - Authentification et Autorisation
+"""
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -6,13 +9,12 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from .database import get_db
-from ..models.user import User  # Chemin relatif corrigé
+from ..models.user import User
 from .security import decoder_token
 
 # Schéma OAuth2 pour extraire le token JWT depuis le header Authorization
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
-# Fonction dépendance pour obtenir l'utilisateur actuel depuis le token JWT
 def obtenir_utilisateur_actuel(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
@@ -32,6 +34,14 @@ def obtenir_utilisateur_actuel(
     """
     # Décoder le token pour obtenir les données utilisateur
     payload = decoder_token(token)
+    
+    # ✅ VÉRIFICATION IMPORTANTE : Vérifier que le token est valide
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token d'accès invalide ou expiré",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
     # Extraire l'email depuis le payload du token
     email: str = payload.get("sub")
@@ -60,7 +70,6 @@ def obtenir_utilisateur_actuel(
     
     return utilisateur
 
-# Fonction pour créer une dépendance de vérification de rôle
 def verifier_role(roles_autorises: List[str]):
     """
     Crée une dépendance FastAPI qui vérifie que l'utilisateur actuel
@@ -85,12 +94,6 @@ def verifier_role(roles_autorises: List[str]):
     return dependency
 
 # Dépendances prêtes à l'emploi pour les différents niveaux d'autorisation
-
-# Dépendance pour les routes réservées aux administrateurs uniquement
 admin_seulement = verifier_role(["admin"])
-
-# Dépendance pour les routes accessibles aux administrateurs et agents
 agent_ou_admin = verifier_role(["admin", "agent"])
-
-# Dépendance pour les routes accessibles à tous les rôles (admin, agent, lecteur)
 tous_les_roles = verifier_role(["admin", "agent", "lecteur"])
